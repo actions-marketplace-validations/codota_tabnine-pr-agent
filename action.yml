@@ -44,7 +44,13 @@ runs:
       shell: bash
 
     - name: Run analyse
-      run: docker run --rm -v ./tabnine:/etc/tabnine_cli -v ${{inputs.path_to_repo}}:/opt/repository ghcr.io/codota/tabnine-cli:latest review diff -b ${{ inputs.base_ref }} -bf ${{ inputs.ref }} --token ${{inputs.PAT}} --workspace ${{ inputs.repository_owner }} --repo_slug ${{ inputs.repository_name }} --pr_id ${{ inputs.pull_request_id }} --url ${{ inputs.selfhosted_url }} /opt/repository
+      run: |
+        set -e
+        set -o pipefail
+        docker run --rm -v ./tabnine:/etc/tabnine_cli -v ${{inputs.path_to_repo}}:/opt/repository ghcr.io/codota/tabnine-cli:latest review diff -b ${{ inputs.base_ref }} -bf ${{ inputs.ref }} --token ${{inputs.PAT}} --workspace ${{ inputs.repository_owner }} --repo_slug ${{ inputs.repository_name }} --pr_id ${{ inputs.pull_request_id }} --url ${{ inputs.selfhosted_url }} /opt/repository | tee analyse_output.txt
+        if grep -q "no changes were detected" analyse_output.txt; then
+          touch no_changes_detected.flag
+        fi
       shell: bash
     
     - name: Saving state
@@ -56,5 +62,10 @@ runs:
         key: storage-${{ github.ref_name }}
 
     - name: Check report in watch mode
-      run: docker run -e GITHUB_TOKEN=${{ inputs.github_token }} -e GITHUB_ACTION=__self --rm -v ./tabnine:/etc/tabnine_cli ghcr.io/codota/tabnine-cli:latest review report --format github --token ${{inputs.PAT}} --workspace ${{ inputs.repository_owner }} --repo_slug ${{ inputs.repository_name }} --pr_id ${{ inputs.pull_request_id }} --url ${{ inputs.selfhosted_url }} --last --watch
+      run: |
+        if [ -f no_changes_detected.flag ]; then
+          echo "No changes detected"
+          exit 0
+        fi
+        docker run -e GITHUB_TOKEN=${{ inputs.github_token }} -e GITHUB_ACTION=__self --rm -v ./tabnine:/etc/tabnine_cli ghcr.io/codota/tabnine-cli:latest review report --format github --token ${{inputs.PAT}} --workspace ${{ inputs.repository_owner }} --repo_slug ${{ inputs.repository_name }} --pr_id ${{ inputs.pull_request_id }} --url ${{ inputs.selfhosted_url }} --last --watch
       shell: bash
