@@ -44,6 +44,10 @@ with:
 
   # GitHub token for authentication, provided by GitHub when the workflow is run
   github_token: ${{ secrets.GITHUB_TOKEN }}
+  
+  # Only for selfhosted/EMT installation - selfhosted server URL. Example for EMT:"
+  # selfhosted_url: "https://console.tabnine.com/"
+
 ```
 
 # Examples
