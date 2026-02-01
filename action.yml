@@ -115,18 +115,32 @@ runs:
         1. Execute 'gh pr view --json title,body,comments' to understand the intent.
         2. Execute 'gh pr diff' to examine the implementation.
         ### Phase B: Clean Up Previous Bot Comments
-        Before posting new comments, remove all previous comments from Tabnine PR Bot to avoid clutter and outdated feedback:
+        Before posting new comments, clean up previous Tabnine PR Bot feedback:
+        **Inline review comments** — delete all previous ones:
         1. List all review comments: 'gh api /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments'
-        2. For each comment that starts with '#### Tabnine PR Bot', delete it using: 'gh api --method DELETE /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments/COMMENT_ID'
-        3. List all PR comments (issue comments): 'gh api /repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments'
-        4. For each comment that starts with '#### Tabnine PR Bot', delete it using: 'gh api --method DELETE /repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments/COMMENT_ID'
-        This ensures each review run provides fresh, up-to-date feedback without accumulating stale comments.
+        2. For each comment whose body starts with '#### Tabnine PR Bot', delete it using: 'gh api --method DELETE /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments/COMMENT_ID'
+        **Summary comment (issue comment)** — find and save its ID for later update:
+        1. List all PR issue comments: 'gh api /repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments'
+        2. Find the comment whose body starts with '#### Tabnine PR Bot'. If found, save its COMMENT_ID as EXISTING_SUMMARY_COMMENT_ID for use in Phase E.
+        3. If multiple such comments exist, delete all except the earliest one and use that earliest one's ID as EXISTING_SUMMARY_COMMENT_ID.
+        This ensures each review run provides fresh inline feedback and updates the summary comment in-place rather than creating duplicates.
         ### Phase C: Engineering Audit
         Evaluate the code against these Software Engineering pillars:
         **Correctness & Logic**: Does the code solve the problem? Are there edge cases, off-by-one errors, or race conditions?
         **Maintainability & Readability**: Are names self-explanatory? Is the code simple and modular? Are complex parts documented?
         **Security & Reliability**: Are inputs sanitized? Are secrets exposed? Does error handling fail safely?
         **Performance**: Are there unnecessary allocations or blocking operations?
+        ### Phase C2: Cross-Repository Impact Analysis
+        Use the Tabnine MCP context engine tools to analyze cross-repository impact of this PR:
+        1. **List repositories**: Call 'remote_repositories_list' to discover the organization's repository ecosystem.
+        2. **Find related services**: Call 'remote_search_assets' with queries derived from the changed files to find SERVICE_SUMMARY and OPENAPI_SPEC assets related to the code being modified.
+        3. **Search for cross-repo consumers**: For each significant function, class, or API endpoint modified in the diff, call 'remote_codebase_search' to find code in OTHER repositories that imports or calls those interfaces. Include the local repo URL in 'denyListRepos' to exclude self-references.
+        4. **Inspect symbol usages**: For key changed symbols, call 'remote_symbol_content' to retrieve full source of cross-repo consumers and assess whether the PR changes would break them.
+        5. **Check architecture constraints**: Call 'remote_get_asset' with assetType 'SERVICE_SUMMARY' for the affected service(s) to understand the intended architecture and verify this PR does not introduce unwanted inter-service dependencies.
+        6. **Compile findings** for inclusion in the Phase E summary comment:
+           - Architecture violations or new inter-service dependencies introduced by this PR
+           - Other repositories or services that consume the changed code and may be impacted (with file and line references where possible)
+           - If no cross-repo impact is found, state 'No cross-repository impact detected'
         ## 4. Comment Value Threshold (CRITICAL FILTER)
 
         Before posting ANY comment, it MUST pass ALL of these criteria:
@@ -169,14 +183,20 @@ runs:
         \`\`\`
         For larger changes or context-dependent fixes, provide guidance as a regular comment without the suggestion block.
         ### Phase E: Final Summary
-        After submitting inline comments (or if zero comments were posted), post a holistic summary:
-        gh pr review --comment -b '#### Tabnine PR Bot
+        After submitting inline comments (or if zero comments were posted), post or update the holistic summary.
+        **If EXISTING_SUMMARY_COMMENT_ID was found in Phase B**, update the existing comment:
+        gh api --method PATCH /repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments/EXISTING_SUMMARY_COMMENT_ID -f body='#### Tabnine PR Bot
+
+        YOUR_SUMMARY'
+        **Otherwise**, create a new comment:
+        gh api --method POST /repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments -f body='#### Tabnine PR Bot
 
         YOUR_SUMMARY'
         Your summary must:
         - Start with the '#### Tabnine PR Bot' header (already included in the command above)
         - Acknowledge what the PR accomplishes
         - Note any critical issues found (or state 'No critical issues identified')
+        - Include a 'Cross-Repository Impact' section with findings from Phase C2 (architecture violations, affected consumers, or 'No cross-repository impact detected')
         - Be concise
         ## 5. Tone Guidelines
         - Constructive: Suggest improvements or alternatives.
