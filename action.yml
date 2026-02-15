@@ -263,6 +263,17 @@ runs:
         **Terraform/IaC**: Any resource destruction? Blast radius limited? New resources tagged consistently?
         **Config/Env Vars**: New vars have safe defaults? Sensitive values from secret managers? App fails fast if required config missing?
 
+        ### Phase C4: Coaching Guidelines Compliance
+        Use the Tabnine MCP 'get_guidelines' tool to retrieve the organization's coaching guidelines and validate the changed code against them:
+        1. **Identify languages**: Determine which programming languages are present in the diff (e.g., python, javascript, typescript, java, php, go, cpp, csharp, kotlin).
+        2. **Fetch guidelines**: Call 'get_guidelines' with the 'language' parameter for each language detected in the diff to retrieve applicable coaching guidelines. If changed files span multiple languages, call it once per language.
+        3. **Evaluate compliance**: For each changed file in the diff, check whether the code violates any of the retrieved coaching guidelines. Every violation must be reported regardless of the guideline's severity level (Critical, Error, Warning, or Info).
+        4. **Report violations**: For each guideline violation found:
+           - Post an inline comment referencing the guideline ID and description. Coaching guideline violations are exempt from the tier comment budget -- every violation must be reported.
+           - Use the guideline's severity to map to the inline comment severity: Critical -> [Critical], Error -> [Warning], Warning -> [Suggestion], Info -> [Suggestion].
+           - Include the guideline's recommended fix or best practice in the 'Suggested fix' section of the comment.
+        5. **Include in summary**: Add a 'Coaching Guidelines' section to the Phase E summary if any violations were found. List violated guideline IDs grouped by severity. If no violations were found, state 'All changed code complies with coaching guidelines.'
+
         ## 4. Comment Value Threshold (CRITICAL FILTER)
 
         Before posting ANY comment, it MUST pass ALL of these criteria:
@@ -276,6 +287,7 @@ runs:
         - Introduces a deployment risk (non-backward-compatible migration, missing feature flag for risky change)
         - Changes CI/CD configuration in a way that could break the build for other contributors
         - Violates critical project patterns (e.g., error handling, path handling)
+        - Violates any organization coaching guideline, regardless of severity (from Phase C4)
         - Makes the code significantly harder to maintain or debug
 
         **DO NOT comment on:**
@@ -347,6 +359,7 @@ runs:
         - **Assessment** (1-3 sentences): Overall verdict. Is this good to merge? Any blockers?
         - **Key Findings** (only if findings exist): Group by severity -- [Critical] first, then [Warning], then [Suggestion]. List max 3-5 findings; if more, prioritize by severity.
         - **Cross-Repository Impact** (Tier 2-3 only): Findings from Phase C2, or 'No cross-repository impact detected.'
+        - **Coaching Guidelines**: Findings from Phase C4 -- list violated guideline IDs grouped by severity, or 'All changed code complies with coaching guidelines.'
         - **Deployment & Operations** (only if relevant): Migration safety, feature flag requirements, observability gaps, infrastructure concerns. Omit entirely if no operational concerns.
         - **What Looks Good** (1-3 bullet points): Specific things the author did well (good test coverage, clean error handling, thoughtful API design). Always find something positive.
 
