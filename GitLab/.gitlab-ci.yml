@@ -87,7 +87,7 @@ tabnine-code-review:
       echo "Cleaning up previous Tabnine PR Bot notes..."
       NOTES=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" 
         "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes" 
-        | jq -r '.[] | select(.body | startswith("#### Tabnine PR Bot")) | .id')
+        | jq -r '.[] | select(.body | contains("#### Tabnine PR Bot")) | .id')
 
       for NOTE_ID in $NOTES; do
         echo "Deleting bot note: $NOTE_ID"
@@ -152,7 +152,7 @@ tabnine-code-review:
       ### Phase B: Clean Up Previous Inline Comments
       Before posting new inline comments, delete all previous Tabnine PR Bot inline review comments:
       1. List all MR discussions: curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions'
-      2. For each discussion note whose body starts with '#### Tabnine PR Bot', delete it using: curl -s --request DELETE --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions/DISCUSSION_ID/notes/NOTE_ID'
+      2. For each discussion note whose body contains '#### Tabnine PR Bot', delete it using: curl -s --request DELETE --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions/DISCUSSION_ID/notes/NOTE_ID'
       Note: Summary notes are cleaned up automatically before this review runs, so you only need to handle inline comments here.
 
       ### Phase C: Engineering Audit
