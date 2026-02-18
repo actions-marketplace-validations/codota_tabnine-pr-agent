@@ -9,17 +9,18 @@
 #
 # Optional CI/CD Variables:
 #   TABNINE_HOST         - Tabnine host URL (default: https://console.tabnine.com)
-#   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent (default: c5ff943b-972a-45e7-9242-a3367c907074)
+#   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent
 
 stages:
   - review
 
 tabnine-code-review:
   stage: review
-  image: node:20.11.1
+  image: node:20
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
+    # default values for optional variables
     TABNINE_HOST: "https://console.tabnine.com"
     TABNINE_MODEL_ID: ""
   before_script:
@@ -27,10 +28,12 @@ tabnine-code-review:
     # Input validation
     - |
       if [ -z "$TABNINE_KEY" ]; then
-        echo "Warning: TABNINE_KEY not set"
+        echo "Error: TABNINE_KEY not set"
+        exit 1
       fi
       if [ -z "$GITLAB_API_TOKEN" ]; then
-        echo "Warning: GITLAB_API_TOKEN not set"
+        echo "Error: GITLAB_API_TOKEN not set"
+        exit 1
       fi
 
     - apt-get update -qq && apt-get install -y -qq curl git jq > /dev/null 2>&1
@@ -89,7 +92,7 @@ tabnine-code-review:
       export PROJECT_PATH="${CI_PROJECT_PATH}"
 
       # Clean up previous bot summary notes
-      echo "Cleaning up previous Tabnine MR Bot notes..."
+      echo "Cleaning up previous Tabnine PR Bot notes..."
       NOTES=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
         "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes" \
         | jq -r '.[] | select(.body | startswith("#### Tabnine PR Bot")) | .id')
