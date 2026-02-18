@@ -9,7 +9,7 @@
 #
 # Optional Repository Variables:
 #   TABNINE_HOST           - Tabnine host URL (default: https://console.tabnine.com)
-#   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent (uses system default if not set)
+#   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent. Overrides DEFAULT_MODEL_ID set in the script below.
 
 image: node:20
 
@@ -53,10 +53,16 @@ pipelines:
 
               mkdir -p ~/.tabnine/agent
 
+              # Set a default model ID here, or leave empty to use the system default from the admin console.
+              DEFAULT_MODEL_ID=""
+
+              # Resolve model ID: repository variable overrides the default
+              RESOLVED_MODEL_ID="${TABNINE_MODEL_ID:-$DEFAULT_MODEL_ID}"
+
               # Build optional model block
               MODEL_BLOCK=""
-              if [ -n "$TABNINE_MODEL_ID" ]; then
-                MODEL_BLOCK=',"model":{"name":"'"$TABNINE_MODEL_ID"'"}'
+              if [ -n "$RESOLVED_MODEL_ID" ]; then
+                MODEL_BLOCK=',"model":{"name":"'"$RESOLVED_MODEL_ID"'"}'
               fi
 
               cat << EOF > ~/.tabnine/agent/settings.json

@@ -14,7 +14,7 @@ inputs:
     default: 'https://console.tabnine.com'
   model_id:
     required: false
-    description: 'Model ID for the Tabnine CLI agent'
+    description: 'Model ID for the Tabnine CLI agent. If omitted, falls back to DEFAULT_MODEL_ID below or the system default.'
     default: ''
   repository:
     required: true
@@ -65,10 +65,17 @@ runs:
 
         mkdir -p ~/.tabnine/agent
 
+        # Set a default model ID here, or leave empty to use the system default from the admin console.
+        DEFAULT_MODEL_ID=""
+
+        # Resolve model ID: input overrides the default
+        RESOLVED_MODEL_ID="${{ inputs.model_id }}"
+        RESOLVED_MODEL_ID="${RESOLVED_MODEL_ID:-$DEFAULT_MODEL_ID}"
+
         # Build optional model block
         MODEL_BLOCK=""
-        if [ -n "${{ inputs.model_id }}" ]; then
-          MODEL_BLOCK=',"model":{"name":"${{ inputs.model_id }}"}'
+        if [ -n "$RESOLVED_MODEL_ID" ]; then
+          MODEL_BLOCK=",\"model\":{\"name\":\"$RESOLVED_MODEL_ID\"}"
         fi
 
         # Write Settings

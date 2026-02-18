@@ -61,7 +61,7 @@ permissions:
     # Tabnine host URL (optional, default: https://console.tabnine.com)
     # tabnine_host: "https://console.tabnine.com"
 
-    # Model ID for the Tabnine CLI agent (optional, uses system default if omitted)
+    # Model ID for the Tabnine CLI agent (optional, overrides DEFAULT_MODEL_ID in action.yml)
     # model_id: "your-model-id"
 ```
 
@@ -76,7 +76,7 @@ permissions:
 | `head_sha` | Yes | — | PR head commit SHA |
 | `base_sha` | Yes | — | PR base commit SHA |
 | `tabnine_host` | No | `https://console.tabnine.com` | Tabnine host URL (for self-hosted / EMT installations) |
-| `model_id` | No | System default | Model ID for the Tabnine CLI agent. If omitted, uses the model configured in the admin console. |
+| `model_id` | No | — | Model ID for the Tabnine CLI agent. Overrides `DEFAULT_MODEL_ID` set in `action.yml`. If both are empty, uses the system default from the admin console. |
 
 ## Full Workflow Example
 
@@ -128,7 +128,7 @@ Set the following CI/CD variables in **Settings > CI/CD > Variables**:
 | `TABNINE_KEY` | Yes | Tabnine authentication credentials (JSON). Mark as **Masked** and **Protected**. |
 | `GITLAB_API_TOKEN` | Yes | GitLab personal or project access token with `api` scope. Mark as **Masked**. |
 | `TABNINE_HOST` | No | Tabnine host URL (default: `https://console.tabnine.com`) |
-| `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If omitted, uses the model configured in the admin console. |
+| `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. Overrides `DEFAULT_MODEL_ID` set in the yml. If both are empty, uses the system default. |
 
 ## Usage
 
@@ -165,7 +165,7 @@ Set the following repository variables in **Repository Settings > Pipelines > Re
 | `TABNINE_KEY` | Yes | Tabnine authentication credentials (JSON). Mark as **Secured**. |
 | `BB_API_TOKEN` | Yes | Bitbucket token with `pullrequest:write` and `repository:read` scopes. Mark as **Secured**. |
 | `TABNINE_HOST` | No | Tabnine host URL (default: `https://console.tabnine.com`) |
-| `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If omitted, uses the model configured in the admin console. |
+| `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. Overrides `DEFAULT_MODEL_ID` set in the yml. If both are empty, uses the system default. |
 
 ## Usage
 
