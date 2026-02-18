@@ -15,7 +15,7 @@ inputs:
   model_id:
     required: false
     description: 'Model ID for the Tabnine CLI agent'
-    default: 'c5ff943b-972a-45e7-9242-a3367c907074'
+    default: ''
   repository:
     required: true
     description: 'Repository in owner/repo format'
@@ -65,6 +65,12 @@ runs:
 
         mkdir -p ~/.tabnine/agent
 
+        # Build optional model block
+        MODEL_BLOCK=""
+        if [ -n "${{ inputs.model_id }}" ]; then
+          MODEL_BLOCK=',"model":{"name":"${{ inputs.model_id }}"}'
+        fi
+
         # Write Settings
         cat << EOF > ~/.tabnine/agent/settings.json
         {
@@ -75,10 +81,7 @@ runs:
             "auth": {
               "selectedType": "tabnine-personal"
             }
-          },
-          "model": {
-            "name": "${{ inputs.model_id }}"
-          }
+          }${MODEL_BLOCK}
         }
         EOF
 

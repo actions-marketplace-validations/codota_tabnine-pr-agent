@@ -9,7 +9,7 @@
 #
 # Optional Repository Variables:
 #   TABNINE_HOST           - Tabnine host URL (default: https://console.tabnine.com)
-#   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent (default: c5ff943b-972a-45e7-9242-a3367c907074)
+#   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent (uses system default if not set)
 
 image: node:20
 
@@ -20,7 +20,7 @@ pipelines:
           name: Tabnine Code Review
           script:
             - export TABNINE_HOST="${TABNINE_HOST:-https://console.tabnine.com}"
-            - export TABNINE_MODEL_ID="${TABNINE_MODEL_ID:-c5ff943b-972a-45e7-9242-a3367c907074}"
+            - export TABNINE_MODEL_ID="${TABNINE_MODEL_ID:-}"
             - export BB_API_BASE="https://api.bitbucket.org/2.0"
             - export BB_WORKSPACE="${BITBUCKET_WORKSPACE}"
             - export BB_REPO_SLUG="${BITBUCKET_REPO_SLUG}"
@@ -53,6 +53,12 @@ pipelines:
 
               mkdir -p ~/.tabnine/agent
 
+              # Build optional model block
+              MODEL_BLOCK=""
+              if [ -n "$TABNINE_MODEL_ID" ]; then
+                MODEL_BLOCK=',"model":{"name":"'"$TABNINE_MODEL_ID"'"}'
+              fi
+
               cat << EOF > ~/.tabnine/agent/settings.json
               {
                 "general": {
@@ -62,10 +68,7 @@ pipelines:
                   "auth": {
                     "selectedType": "tabnine-personal"
                   }
-                },
-                "model": {
-                  "name": "$TABNINE_MODEL_ID"
-                }
+                }${MODEL_BLOCK}
               }
               EOF
 
