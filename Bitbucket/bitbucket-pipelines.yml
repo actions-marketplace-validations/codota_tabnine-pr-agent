@@ -28,7 +28,7 @@ pipelines:
             - export BB_REPO_SLUG="${BITBUCKET_REPO_SLUG}"
             - export BB_PR_ID="${BITBUCKET_PR_ID}"
             - export BB_COMMIT="${BITBUCKET_COMMIT}"
-            - export BB_PR_DEST_COMMIT="${BITBUCKET_PR_DESTINATION_BRANCH}"
+            - export BB_PR_DEST_BRANCH="${BITBUCKET_PR_DESTINATION_BRANCH}"
 
             # Install dependencies
             - apt-get update -qq && apt-get install -y -qq curl git jq > /dev/null 2>&1
@@ -58,7 +58,7 @@ pipelines:
               # Build optional model block
               MODEL_BLOCK=""
               if [ -n "$TABNINE_MODEL_ID" ]; then
-                MODEL_BLOCK=',"model":{"name":"'"$TABNINE_MODEL_ID"'"}'
+                MODEL_BLOCK=",\"model\":{\"name\":\"$TABNINE_MODEL_ID\"}"
               fi
 
               cat << EOF > ~/.tabnine/agent/settings.json
@@ -74,12 +74,15 @@ pipelines:
               }
               EOF
 
-              printf "%s" "$TABNINE_KEY" > ~/.tabnine/agent/tabnine_creds.json
+              if ! printf "%s" "$TABNINE_KEY" > ~/.tabnine/agent/tabnine_creds.json; then
+                echo "Error: Failed to write credentials"
+                exit 1
+              fi
               chmod 600 ~/.tabnine/agent/tabnine_creds.json
 
             # Resolve destination commit SHA
             - |
-              BB_BASE_SHA=$(curl -s --header "Authorization: Bearer $BB_API_TOKEN" "$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/refs/branches/$BB_PR_DEST_COMMIT" | jq -r '.target.hash')
+              BB_BASE_SHA=$(curl -s --header "Authorization: Bearer $BB_API_TOKEN" "$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/refs/branches/$BB_PR_DEST_BRANCH" | jq -r '.target.hash')
               export BB_BASE_SHA
 
             # Clean up previous bot summary comments

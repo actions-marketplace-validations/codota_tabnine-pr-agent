@@ -52,7 +52,7 @@ tabnine-code-review:
       # Build optional model block
       MODEL_BLOCK=""
       if [ -n "$TABNINE_MODEL_ID" ]; then
-        MODEL_BLOCK=',"model":{"name":"'"$TABNINE_MODEL_ID"'"}'
+        MODEL_BLOCK=",\"model\":{\"name\":\"$TABNINE_MODEL_ID\"}"
       fi
 
       cat << EOF > ~/.tabnine/agent/settings.json
@@ -68,7 +68,10 @@ tabnine-code-review:
       }
       EOF
 
-      printf "%s" "$TABNINE_KEY" > ~/.tabnine/agent/tabnine_creds.json
+      if ! printf "%s" "$TABNINE_KEY" > ~/.tabnine/agent/tabnine_creds.json; then
+        echo "Error: Failed to write credentials"
+        exit 1
+      fi
       chmod 600 ~/.tabnine/agent/tabnine_creds.json
 
   script:

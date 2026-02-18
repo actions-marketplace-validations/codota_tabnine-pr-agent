@@ -52,7 +52,7 @@ runs:
     - name: Install Tabnine CLI
       shell: bash
       run: |
-        export TABNINE_HOST=${{ inputs.tabnine_host }}
+        export TABNINE_HOST="${{ inputs.tabnine_host }}"
 
         # Download installer first, verify, then execute
         curl -fsSL "$TABNINE_HOST/update/cli/installer.mjs" -o installer.mjs
