@@ -9,22 +9,30 @@
 #
 # Optional CI/CD Variables:
 #   TABNINE_HOST         - Tabnine host URL (default: https://console.tabnine.com)
-#   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent. Overrides DEFAULT_MODEL_ID set in the script below.
+#   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent (default: c5ff943b-972a-45e7-9242-a3367c907074)
 
 stages:
   - review
 
 tabnine-code-review:
   stage: review
-  image: node:20
+  image: node:20.11.1
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
-    # Set a default model ID here, or leave empty to use the system default from the admin console.
-    DEFAULT_MODEL_ID: ""
-    TABNINE_HOST: "${TABNINE_HOST:-https://console.tabnine.com}"
-    TABNINE_MODEL_ID: "${TABNINE_MODEL_ID:-$DEFAULT_MODEL_ID}"
+    TABNINE_HOST: "https://console.tabnine.com"
+    TABNINE_MODEL_ID: ""
   before_script:
+    
+    # Input validation
+    - |
+      if [ -z "$TABNINE_KEY" ]; then
+        echo "Warning: TABNINE_KEY not set"
+      fi
+      if [ -z "$GITLAB_API_TOKEN" ]; then
+        echo "Warning: GITLAB_API_TOKEN not set"
+      fi
+
     - apt-get update -qq && apt-get install -y -qq curl git jq > /dev/null 2>&1
 
     # Install Tabnine CLI
@@ -42,11 +50,6 @@ tabnine-code-review:
 
     # Configure Tabnine Auth & Settings
     - |
-      if [ -z "$TABNINE_KEY" ]; then
-        echo "Error: TABNINE_KEY is required"
-        exit 1
-      fi
-
       mkdir -p ~/.tabnine/agent
 
       # Build optional model block
@@ -72,7 +75,9 @@ tabnine-code-review:
         echo "Error: Failed to write credentials"
         exit 1
       fi
+
       chmod 600 ~/.tabnine/agent/tabnine_creds.json
+      chmod 600 ~/.tabnine/agent/settings.json
 
   script:
     - |
@@ -84,14 +89,14 @@ tabnine-code-review:
       export PROJECT_PATH="${CI_PROJECT_PATH}"
 
       # Clean up previous bot summary notes
-      echo "Cleaning up previous Tabnine PR Bot notes..."
-      NOTES=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" 
-        "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes" 
+      echo "Cleaning up previous Tabnine MR Bot notes..."
+      NOTES=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
+        "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes" \
         | jq -r '.[] | select(.body | startswith("#### Tabnine PR Bot")) | .id')
 
       for NOTE_ID in $NOTES; do
         echo "Deleting bot note: $NOTE_ID"
-        curl -s --request DELETE --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" 
+        curl -s --request DELETE --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
           "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes/$NOTE_ID" || true
       done
       echo "Cleanup complete."
@@ -113,13 +118,13 @@ tabnine-code-review:
       - Authentication: Use header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' for all API calls.
 
       ### GitLab API Quick Reference
-      - Get MR details: curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID'
-      - Get MR changes (diff): curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/changes'
-      - Get MR notes (comments): curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes'
-      - Post MR note (summary comment): curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' --data '{"body": "YOUR_COMMENT"}' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes'
-      - Post MR diff note (inline comment): curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' --data '{"body": "YOUR_COMMENT", "position": {"base_sha": "$BASE_SHA", "head_sha": "$HEAD_SHA", "start_sha": "$BASE_SHA", "position_type": "text", "new_path": "FILE_PATH", "new_line": LINE_NUMBER}}' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions'
-      - Delete MR note: curl -s --request DELETE --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes/NOTE_ID'
-      - List MR discussions (for inline comments): curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions'
+      - Get MR details: curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID'
+      - Get MR changes (diff): curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/changes'
+      - Get MR notes (comments): curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/notes'
+      - Post MR note (summary comment): curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' --data '{\"body\": \"YOUR_COMMENT\"}' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/notes'
+      - Post MR diff note (inline comment): curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' --data '{\"body\": \"YOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": LINE_NUMBER}}' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
+      - Delete MR note: curl -s --request DELETE --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/notes/NOTE_ID'
+      - List MR discussions (for inline comments): curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
 
       ## 3. Operational Procedure
 
@@ -151,8 +156,8 @@ tabnine-code-review:
 
       ### Phase B: Clean Up Previous Inline Comments
       Before posting new inline comments, delete all previous Tabnine PR Bot inline review comments:
-      1. List all MR discussions: curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions'
-      2. For each discussion note whose body starts with '#### Tabnine PR Bot', delete it using: curl -s --request DELETE --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions/DISCUSSION_ID/notes/NOTE_ID'
+      1. List all MR discussions: curl -s --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
+      2. For each discussion note whose body starts with '#### Tabnine PR Bot', delete it using: curl -s --request DELETE --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions/DISCUSSION_ID/notes/NOTE_ID'
       Note: Summary notes are cleaned up automatically before this review runs, so you only need to handle inline comments here.
 
       ### Phase C: Engineering Audit
@@ -321,32 +326,26 @@ tabnine-code-review:
       Submit inline comments using the GitLab Discussions API:
       **IMPORTANT**: All comments MUST start with '#### Tabnine PR Bot' on the first line, followed by a blank line, then your formatted comment content.
       For inline comments on specific lines:
-      curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' 
-        --data '{"body": "#### Tabnine PR Bot
-
-YOUR_COMMENT", "position": {"base_sha": "$BASE_SHA", "head_sha": "$HEAD_SHA", "start_sha": "$BASE_SHA", "position_type": "text", "new_path": "FILE_PATH", "new_line": LINE_NUMBER}}' 
-        '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions'
+      curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
+        --data '{\"body\": \"#### Tabnine PR Bot\n\nYOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": LINE_NUMBER}}' \\
+        '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
       For multi-line inline comments:
-      curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' 
-        --data '{"body": "#### Tabnine PR Bot
-
-YOUR_COMMENT", "position": {"base_sha": "$BASE_SHA", "head_sha": "$HEAD_SHA", "start_sha": "$BASE_SHA", "position_type": "text", "new_path": "FILE_PATH", "new_line": END_LINE_NUMBER, "line_range": {"start": {"line_code": "START_LINE_CODE", "type": "new"}, "end": {"line_code": "END_LINE_CODE", "type": "new"}}}}' 
-        '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions'
+      curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
+        --data '{\"body\": \"#### Tabnine PR Bot\n\nYOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": END_LINE_NUMBER, \"line_range\": {\"start\": {\"line_code\": \"START_LINE_CODE\", \"type\": \"new\"}, \"end\": {\"line_code\": \"END_LINE_CODE\", \"type\": \"new\"}}}}' \\
+        '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
       **Code Suggestions**: Use GitLab's suggestion syntax ONLY when the fix is clear, unambiguous, and replaces 10 or fewer lines:
-      ```suggestion:-0+0
+      \`\`\`suggestion:-0+0
       // Your replacement code
-      ```
+      \`\`\`
       For larger changes or context-dependent fixes, provide guidance as a regular comment without the suggestion block.
 
       ### Phase E: Final Summary
       After submitting inline comments (or if zero comments were posted), post the holistic summary.
       The summary is the MOST IMPORTANT output -- most developers read only this.
       Create the summary note using the GitLab Notes API:
-      curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' 
-        --data '{"body": "#### Tabnine PR Bot
-
-YOUR_SUMMARY"}' 
-        '$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes'
+      curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
+        --data '{\"body\": \"#### Tabnine PR Bot\n\nYOUR_SUMMARY\"}' \\
+        '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/notes'
 
       Structure your summary as follows:
       - **Line 1 - Risk Tier**: State the tier: [Low Risk], [Standard], or [HIGH RISK]

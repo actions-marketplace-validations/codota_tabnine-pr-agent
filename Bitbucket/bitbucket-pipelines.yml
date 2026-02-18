@@ -79,6 +79,7 @@ pipelines:
                 exit 1
               fi
               chmod 600 ~/.tabnine/agent/tabnine_creds.json
+              chmod 600 ~/.tabnine/agent/settings.json
 
             # Resolve destination commit SHA
             - |
