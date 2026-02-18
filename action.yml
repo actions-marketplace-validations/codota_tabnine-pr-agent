@@ -1,3 +1,20 @@
+# Tabnine PR Agent for GitHub
+#
+# This composite action runs an AI-powered code review on pull requests
+# using the Tabnine CLI Agent.
+#
+# Required Inputs:
+#   TABNINE_KEY          - Tabnine authentication credentials (JSON). Store as a repository secret.
+#   github_token         - GitHub token for authentication (typically ${{ secrets.GITHUB_TOKEN }}).
+#   repository           - Repository in owner/repo format.
+#   pull_request_number  - Pull request number.
+#   head_sha             - PR head commit SHA.
+#   base_sha             - PR base commit SHA.
+#
+# Optional Inputs:
+#   tabnine_host         - Tabnine host URL (default: https://console.tabnine.com)
+#   model_id             - Model ID for the Tabnine CLI agent. Overrides DEFAULT_MODEL_ID set in the action below.
+
 name: 'Tabnine: Code Review'
 description: 'AI-powered code review using Tabnine CLI Agent'
 
@@ -58,15 +75,15 @@ runs:
       env:
         TABNINE_KEY: ${{ inputs.TABNINE_KEY }}
       run: |
+        # Set a default model ID here, or leave empty to use the system default from the admin console.
+        DEFAULT_MODEL_ID=""
+
         if [ -z "$TABNINE_KEY" ]; then
           echo "Error: TABNINE_KEY is required"
           exit 1
         fi
 
         mkdir -p ~/.tabnine/agent
-
-        # Set a default model ID here, or leave empty to use the system default from the admin console.
-        DEFAULT_MODEL_ID=""
 
         # Resolve model ID: input overrides the default
         RESOLVED_MODEL_ID="${{ inputs.model_id }}"

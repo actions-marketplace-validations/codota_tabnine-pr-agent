@@ -20,8 +20,10 @@ tabnine-code-review:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   variables:
+    # Set a default model ID here, or leave empty to use the system default from the admin console.
+    DEFAULT_MODEL_ID: ""
     TABNINE_HOST: "${TABNINE_HOST:-https://console.tabnine.com}"
-    TABNINE_MODEL_ID: "${TABNINE_MODEL_ID:-}"
+    TABNINE_MODEL_ID: "${TABNINE_MODEL_ID:-$DEFAULT_MODEL_ID}"
   before_script:
     - apt-get update -qq && apt-get install -y -qq curl git jq > /dev/null 2>&1
 
@@ -47,16 +49,10 @@ tabnine-code-review:
 
       mkdir -p ~/.tabnine/agent
 
-      # Set a default model ID here, or leave empty to use the system default from the admin console.
-      DEFAULT_MODEL_ID=""
-
-      # Resolve model ID: CI/CD variable overrides the default
-      RESOLVED_MODEL_ID="${TABNINE_MODEL_ID:-$DEFAULT_MODEL_ID}"
-
       # Build optional model block
       MODEL_BLOCK=""
-      if [ -n "$RESOLVED_MODEL_ID" ]; then
-        MODEL_BLOCK=',"model":{"name":"'"$RESOLVED_MODEL_ID"'"}'
+      if [ -n "$TABNINE_MODEL_ID" ]; then
+        MODEL_BLOCK=',"model":{"name":"'"$TABNINE_MODEL_ID"'"}'
       fi
 
       cat << EOF > ~/.tabnine/agent/settings.json

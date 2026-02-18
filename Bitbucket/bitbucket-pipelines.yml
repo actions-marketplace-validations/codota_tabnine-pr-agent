@@ -19,8 +19,10 @@ pipelines:
       - step:
           name: Tabnine Code Review
           script:
+            # Set a default model ID here, or leave empty to use the system default from the admin console.
+            - export DEFAULT_MODEL_ID=""
             - export TABNINE_HOST="${TABNINE_HOST:-https://console.tabnine.com}"
-            - export TABNINE_MODEL_ID="${TABNINE_MODEL_ID:-}"
+            - export TABNINE_MODEL_ID="${TABNINE_MODEL_ID:-$DEFAULT_MODEL_ID}"
             - export BB_API_BASE="https://api.bitbucket.org/2.0"
             - export BB_WORKSPACE="${BITBUCKET_WORKSPACE}"
             - export BB_REPO_SLUG="${BITBUCKET_REPO_SLUG}"
@@ -53,16 +55,10 @@ pipelines:
 
               mkdir -p ~/.tabnine/agent
 
-              # Set a default model ID here, or leave empty to use the system default from the admin console.
-              DEFAULT_MODEL_ID=""
-
-              # Resolve model ID: repository variable overrides the default
-              RESOLVED_MODEL_ID="${TABNINE_MODEL_ID:-$DEFAULT_MODEL_ID}"
-
               # Build optional model block
               MODEL_BLOCK=""
-              if [ -n "$RESOLVED_MODEL_ID" ]; then
-                MODEL_BLOCK=',"model":{"name":"'"$RESOLVED_MODEL_ID"'"}'
+              if [ -n "$TABNINE_MODEL_ID" ]; then
+                MODEL_BLOCK=',"model":{"name":"'"$TABNINE_MODEL_ID"'"}'
               fi
 
               cat << EOF > ~/.tabnine/agent/settings.json
