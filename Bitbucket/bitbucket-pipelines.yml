@@ -80,11 +80,6 @@ pipelines:
               }
               EOF
 
-              if ! printf "%s" "$TABNINE_KEY" > ~/.tabnine/agent/tabnine_creds.json; then
-                echo "Error: Failed to write credentials"
-                exit 1
-              fi
-              chmod 600 ~/.tabnine/agent/tabnine_creds.json
               chmod 600 ~/.tabnine/agent/settings.json
 
             # Resolve destination commit SHA
@@ -379,4 +374,4 @@ pipelines:
 
               **Comment Density Rule**: If you are about to post more than the tier's budget, re-evaluate all comments and keep only the most impactful. Developers ignore reviews with too many comments.
               PROMPT_EOF
-              ~/.local/bin/tabnine -y -p "$(cat /tmp/tabnine_prompt.txt)"
+              TABNINE_TOKEN=$TABNINE_KEY ~/.local/bin/tabnine -y -p "$(cat /tmp/tabnine_prompt.txt)"

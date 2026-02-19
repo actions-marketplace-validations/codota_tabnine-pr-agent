@@ -72,16 +72,9 @@ runs:
 
     - name: Configure Tabnine Auth & Settings
       shell: bash
-      env:
-        TABNINE_KEY: ${{ inputs.TABNINE_KEY }}
       run: |
         # Set a default model ID here, or leave empty to use the system default from the admin console.
         DEFAULT_MODEL_ID=""
-
-        if [ -z "$TABNINE_KEY" ]; then
-          echo "Error: TABNINE_KEY is required"
-          exit 1
-        fi
 
         mkdir -p ~/.tabnine/agent
 
@@ -109,13 +102,6 @@ runs:
         }
         EOF
 
-        # Write Credentials securely with error handling
-        if ! printf "%s" "$TABNINE_KEY" > ~/.tabnine/agent/tabnine_creds.json; then
-          echo "Error: Failed to write credentials"
-          exit 1
-        fi
-
-        chmod 600 ~/.tabnine/agent/tabnine_creds.json
         chmod 600 ~/.tabnine/agent/settings.json
 
     - name: Authenticate GitHub CLI
@@ -147,7 +133,14 @@ runs:
 
     - name: Code Review
       shell: bash
+      env:
+        TABNINE_TOKEN: ${{ inputs.TABNINE_KEY }}
       run: |
+        if [ -z "$TABNINE_TOKEN" ]; then
+          echo "Error: TABNINE_KEY is required"
+          exit 1
+        fi
+      
         ~/.local/bin/tabnine -y -p "## 1. Persona & Context
         You are a collaborative Staff Engineer acting as a second pair of eyes on a teammate's PR.
         Your primary goal is to catch issues that genuinely matter -- bugs, security risks, data integrity problems, and production readiness gaps -- while respecting the author's expertise and intent.

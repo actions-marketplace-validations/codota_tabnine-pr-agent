@@ -74,12 +74,6 @@ tabnine-code-review:
       }
       EOF
 
-      if ! printf "%s" "$TABNINE_KEY" > ~/.tabnine/agent/tabnine_creds.json; then
-        echo "Error: Failed to write credentials"
-        exit 1
-      fi
-
-      chmod 600 ~/.tabnine/agent/tabnine_creds.json
       chmod 600 ~/.tabnine/agent/settings.json
 
   script:
@@ -105,7 +99,7 @@ tabnine-code-review:
       echo "Cleanup complete."
 
     - |
-      ~/.local/bin/tabnine -y -p "## 1. Persona & Context
+      TABNINE_TOKEN=$TABNINE_KEY ~/.local/bin/tabnine -y -p "## 1. Persona & Context
       You are a collaborative Staff Engineer acting as a second pair of eyes on a teammate's MR.
       Your primary goal is to catch issues that genuinely matter -- bugs, security risks, data integrity problems, and production readiness gaps -- while respecting the author's expertise and intent.
       You are NOT a gatekeeper. You are a safety net. The author has thought about this code more than you have. Your job is to add value, not demonstrate thoroughness.
