@@ -12,7 +12,7 @@ Set the following repository secret in **Settings > Secrets and variables > Acti
 
 | Secret / Variable | Required | Description |
 |---|---|---|
-| `TABNINE_KEY` | Yes | Tabnine authentication credentials (JSON). Store as a **repository secret**. |
+| `TABNINE_KEY` | Yes | Tabnine Personal Access Token. Store as a **repository secret**. |
 
 The action also requires a `github_token` input — typically provided via the built-in `secrets.GITHUB_TOKEN`.
 
@@ -40,7 +40,7 @@ permissions:
   uses: codota/tabnine-pr-agent@v1
   continue-on-error: true
   with:
-    # Tabnine authentication credentials (JSON) — required
+    # Tabnine authentication token — required
     TABNINE_KEY: ${{ secrets.TABNINE_KEY }}
 
     # GitHub token for authentication — required
@@ -69,7 +69,7 @@ permissions:
 
 | Input | Required | Default | Description |
 |---|---|---|---|
-| `TABNINE_KEY` | Yes | — | Tabnine authentication credentials (JSON) |
+| `TABNINE_KEY` | Yes | — | Tabnine Personal Access Token |
 | `github_token` | Yes | — | GitHub token for authentication (typically `secrets.GITHUB_TOKEN`) |
 | `repository` | Yes | — | Repository in `owner/repo` format |
 | `pull_request_number` | Yes | — | Pull request number |
@@ -125,7 +125,7 @@ Set the following CI/CD variables in **Settings > CI/CD > Variables**:
 
 | Variable | Required | Description |
 |---|---|---|
-| `TABNINE_KEY` | Yes | Tabnine authentication credentials (JSON). Mark as **Masked** and **Protected**. |
+| `TABNINE_KEY` | Yes | Tabnine Personal Access Token. Mark as **Masked** and **Protected**. |
 | `GITLAB_API_TOKEN` | Yes | GitLab personal or project access token with `api` scope. Mark as **Masked**. |
 | `TABNINE_HOST` | No | Tabnine host URL for self-hosted / EMT installations (default: `https://console.tabnine.com`) |
 | `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If empty, uses the system default from the admin console. |
@@ -162,7 +162,7 @@ Set the following repository variables in **Repository Settings > Pipelines > Re
 
 | Variable | Required | Description |
 |---|---|---|
-| `TABNINE_KEY` | Yes | Tabnine authentication credentials (JSON). Mark as **Secured**. |
+| `TABNINE_KEY` | Yes | Tabnine Personal Access Token. Mark as **Secured**. |
 | `BB_API_TOKEN` | Yes | Bitbucket token with `pullrequest:write` and `repository:read` scopes. Mark as **Secured**. |
 | `TABNINE_HOST` | No | Tabnine host URL for self-hosted / EMT installations (default: `https://console.tabnine.com`) |
 | `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If empty, falls back to `DEFAULT_MODEL_ID` in the pipeline yml or the system default from the admin console. |
