@@ -1,7 +1,9 @@
 # Tabnine PR Agent for GitHub
 #
-# This composite action runs an AI-powered code review on pull requests
-# using the Tabnine CLI Agent.
+# This composite action runs a Tabnine CLI Agent task on pull requests.
+# By default it performs an AI-powered code review, but the prompt can be
+# overridden to run any custom task (e.g., enforcing conventions, generating
+# summaries, or checking documentation).
 #
 # Required Inputs:
 #   TABNINE_KEY          - Tabnine authentication credentials (JSON). Store as a repository secret.
@@ -14,9 +16,12 @@
 # Optional Inputs:
 #   tabnine_host         - Tabnine host URL (default: https://console.tabnine.com)
 #   model_id             - Model ID for the Tabnine CLI agent. If omitted, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
+#   prompt_override      - Custom prompt to replace the default code review prompt. When set, the agent runs your prompt instead.
+#   step_name            - Display name for the agent step (default: 'Tabnine Agent').
+#   comment_prefix       - Prefix used to identify bot comments for cleanup (default: '#### Tabnine PR Bot'). Each action invocation should use a unique prefix to avoid interfering with other invocations.
 
-name: 'Tabnine: Code Review'
-description: 'AI-powered code review using Tabnine CLI Agent'
+name: 'Tabnine PR Agent'
+description: 'Run a Tabnine CLI Agent task on a pull request'
 
 inputs:
   TABNINE_KEY:
@@ -45,6 +50,18 @@ inputs:
   base_sha:
     required: true
     description: 'PR base commit SHA'
+  prompt_override:
+    required: false
+    description: 'Custom prompt to replace the default code review prompt. When provided, this prompt is passed to the Tabnine CLI agent instead of the built-in code review prompt.'
+    default: ''
+  step_name:
+    required: false
+    description: 'Display name for the agent step.'
+    default: 'Tabnine Agent'
+  comment_prefix:
+    required: false
+    description: 'Prefix used to identify bot comments for cleanup. Use a unique value per action invocation to avoid cross-cleanup.'
+    default: '#### Tabnine PR Bot'
 
 runs:
   using: 'composite'
@@ -116,11 +133,12 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
+        COMMENT_PREFIX: ${{ inputs.comment_prefix }}
       run: |
-        echo "Cleaning up previous Tabnine PR Bot summary comments..."
+        echo "Cleaning up previous bot summary comments (prefix: $COMMENT_PREFIX)..."
 
-        # Get all issue comments on the PR
-        COMMENTS=$(gh api "/repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments" --jq '.[] | select(.body | startswith("#### Tabnine PR Bot")) | .id')
+        # Get all issue comments on the PR matching the configured prefix
+        COMMENTS=$(gh api "/repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments" --jq '[.[] | select(.body | startswith(env.COMMENT_PREFIX)) | .id] | .[]')
 
         # Delete all bot summary comments to prevent duplicates
         # Note: DELETE endpoint is /repos/{owner}/{repo}/issues/comments/{comment_id} (no issue number)
@@ -131,14 +149,20 @@ runs:
 
         echo "Cleanup complete."
 
-    - name: Code Review
+    - name: ${{ inputs.step_name }}
       shell: bash
       env:
         TABNINE_TOKEN: ${{ inputs.TABNINE_KEY }}
+        PROMPT_OVERRIDE: ${{ inputs.prompt_override }}
       run: |
         if [ -z "$TABNINE_TOKEN" ]; then
           echo "Error: TABNINE_KEY is required"
           exit 1
+        fi
+
+        if [ -n "$PROMPT_OVERRIDE" ]; then
+          ~/.local/bin/tabnine -y -p "$PROMPT_OVERRIDE"
+          exit $?
         fi
       
         ~/.local/bin/tabnine -y -p "## 1. Persona & Context
@@ -182,9 +206,9 @@ runs:
         Determine the tier before proceeding. State the tier in your summary.
 
         ### Phase B: Clean Up Previous Inline Comments
-        Before posting new inline comments, delete all previous Tabnine PR Bot inline review comments:
+        Before posting new inline comments, delete all previous bot inline review comments:
         1. List all review comments: 'gh api /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments'
-        2. For each comment whose body starts with '#### Tabnine PR Bot', delete it using: 'gh api --method DELETE /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments/COMMENT_ID'
+        2. For each comment whose body starts with '${{ inputs.comment_prefix }}', delete it using: 'gh api --method DELETE /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments/COMMENT_ID'
         Note: Summary comments are cleaned up automatically before this review runs, so you only need to handle inline comments here.
 
         ### Phase C: Engineering Audit
@@ -353,17 +377,17 @@ runs:
         **FILE-LEVEL vs LINE-LEVEL comments**: If a comment applies to the entire file rather than specific lines (e.g., a deleted file, a file that should not exist, or a concern about the file as a whole), post a FILE-LEVEL comment using 'subject_type=file' instead of a multi-line comment spanning all lines. Never post a multi-line comment that covers all or most lines of a file -- this creates an excessively large comment. Use file-level comments for file-wide feedback.
 
         Submit inline comments using:
-        **IMPORTANT**: All comments MUST start with '#### Tabnine PR Bot' on the first line, followed by a blank line, then your formatted comment content.
+        **IMPORTANT**: All comments MUST start with '${{ inputs.comment_prefix }}' on the first line, followed by a blank line, then your formatted comment content.
         For FILE-LEVEL comments (when the comment applies to the entire file, not specific lines):
-        gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments -f body='#### Tabnine PR Bot
+        gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments -f body='${{ inputs.comment_prefix }}
 
         YOUR_COMMENT' -f commit_id='${{ inputs.head_sha }}' -f path='FILE_PATH' -f subject_type='file'
         For SINGLE-LINE comments:
-        gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments -f body='#### Tabnine PR Bot
+        gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments -f body='${{ inputs.comment_prefix }}
 
         YOUR_COMMENT' -f commit_id='${{ inputs.head_sha }}' -f path='FILE_PATH' -F line=LINE_NUMBER -f side='RIGHT'
         For MULTI-LINE comments:
-        gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments -f body='#### Tabnine PR Bot
+        gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ inputs.repository }}/pulls/${{ inputs.pull_request_number }}/comments -f body='${{ inputs.comment_prefix }}
 
         YOUR_COMMENT' -f commit_id='${{ inputs.head_sha }}' -f path='FILE_PATH' -F start_line=START_LINE_NUMBER -f start_side='RIGHT' -F line=END_LINE_NUMBER -f side='RIGHT'
         **Code Suggestions**: Use GitHub's suggestion syntax ONLY when the fix is clear, unambiguous, and replaces 10 or fewer lines:
@@ -376,7 +400,7 @@ runs:
         After submitting inline comments (or if zero comments were posted), post the holistic summary.
         The summary is the MOST IMPORTANT output -- most developers read only this.
         Create the summary comment using:
-        gh api --method POST /repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments -f body='#### Tabnine PR Bot
+        gh api --method POST /repos/${{ inputs.repository }}/issues/${{ inputs.pull_request_number }}/comments -f body='${{ inputs.comment_prefix }}
 
         YOUR_SUMMARY'
 
