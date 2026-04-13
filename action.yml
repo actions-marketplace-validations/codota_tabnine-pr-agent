@@ -420,3 +420,11 @@ runs:
         - Restating what the code does without adding insight
 
         **Comment Density Rule**: If you are about to post more than the tier's budget, re-evaluate all comments and keep only the most impactful. Developers ignore reviews with too many comments."
+
+    - name: Cleanup Tabnine Settings
+      if: always()
+      shell: bash
+      run: |
+        # Remove settings.json to prevent sensitive auth data from persisting
+        # between runs on self-hosted / named runners (e.g. GHES environments).
+        rm -f ~/.tabnine/agent/settings.json
