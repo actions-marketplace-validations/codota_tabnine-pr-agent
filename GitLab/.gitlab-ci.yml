@@ -24,7 +24,7 @@ tabnine-code-review:
     # default values for optional variables
     TABNINE_HOST: "https://console.tabnine.com"
     TABNINE_MODEL_ID: ""
-    TABNINE_CLEANUP: ""
+    TABNINE_CLEANUP: "false"
   before_script:
     
     # Input validation

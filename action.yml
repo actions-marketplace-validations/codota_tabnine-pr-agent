@@ -14,7 +14,7 @@
 # Optional Inputs:
 #   tabnine_host         - Tabnine host URL (default: https://console.tabnine.com)
 #   model_id             - Model ID for the Tabnine CLI agent. If omitted, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
-#   cleanup              - Set to "true" to delete settings.json after each run. Recommended for self-hosted runners.
+#   cleanup              - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
 
 name: 'Tabnine: Code Review'
 description: 'AI-powered code review using Tabnine CLI Agent'
@@ -37,7 +37,7 @@ inputs:
   cleanup:
     required: false
     description: 'Set to "true" to delete settings.json after each run. Recommended for self-hosted runners.'
-    default: ''
+    default: 'false'
   repository:
     required: true
     description: 'Repository in owner/repo format'

@@ -10,7 +10,7 @@
 # Optional Repository Variables:
 #   TABNINE_HOST           - Tabnine host URL (default: https://console.tabnine.com)
 #   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent. If empty, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
-#   TABNINE_CLEANUP        - Set to "true" to delete settings.json after each run. Recommended for self-hosted runners.
+#   TABNINE_CLEANUP        - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
 
 image: node:20
 
