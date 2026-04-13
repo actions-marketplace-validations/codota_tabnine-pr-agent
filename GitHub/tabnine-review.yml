@@ -11,6 +11,7 @@
 # Optional Variables (set in Settings > Secrets and variables > Actions > Variables tab > "New repository variable"):
 #   TABNINE_HOST         - Tabnine host URL (default: https://console.tabnine.com). Set this for self-hosted / EMT installations.
 #   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent. If empty, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
+#   TABNINE_CLEANUP      - Set to "true" to delete settings.json after each run. Recommended for self-hosted runners.
 
 name: "Tabnine PR Review Agent"
 
@@ -415,3 +416,11 @@ jobs:
           - Restating what the code does without adding insight
 
           **Comment Density Rule**: If you are about to post more than the tier's budget, re-evaluate all comments and keep only the most impactful. Developers ignore reviews with too many comments."
+
+      - name: Cleanup Tabnine Settings
+        if: always() && vars.TABNINE_CLEANUP == 'true'
+        shell: bash
+        run: |
+          # Remove settings.json to prevent sensitive auth data from persisting
+          # between runs on self-hosted / named runners (e.g. GHES environments).
+          rm -f ~/.tabnine/agent/settings.json
