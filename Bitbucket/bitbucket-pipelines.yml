@@ -10,6 +10,7 @@
 # Optional Repository Variables:
 #   TABNINE_HOST           - Tabnine host URL (default: https://console.tabnine.com)
 #   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent. If empty, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
+#   TABNINE_CLEANUP        - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
 
 image: node:20
 
@@ -375,3 +376,9 @@ pipelines:
               **Comment Density Rule**: If you are about to post more than the tier's budget, re-evaluate all comments and keep only the most impactful. Developers ignore reviews with too many comments.
               PROMPT_EOF
               TABNINE_TOKEN=$TABNINE_KEY ~/.local/bin/tabnine -y -p "$(cat /tmp/tabnine_prompt.txt)"
+            # Cleanup Tabnine Settings (optional, for self-hosted runners)
+            - |
+              if [ "${TABNINE_CLEANUP}" = "true" ]; then
+                echo "Cleaning up Tabnine settings..."
+                rm -f ~/.tabnine/agent/settings.json
+              fi
