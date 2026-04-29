@@ -139,28 +139,22 @@ pipelines:
               Based on Phase A, classify this PR into a risk tier:
 
               **Tier 1 - Low Risk** (docs, config, tests, typo fixes, dependency bumps with no code changes):
-              - Skip Phase C2 (cross-repo analysis) and Phase C3 (infra review) entirely.
-              - Post only the summary comment (Phase E) with a brief confirmation.
+              - Skip Phase B2 (cross-repo analysis) and Phase B3 (infra review) entirely.
+              - Post only the summary comment (Phase D) with a brief confirmation.
               - Maximum inline comments: 1 (only for genuine bugs).
 
               **Tier 2 - Standard** (feature work, refactors, most bug fixes):
-              - Run full Phase C audit.
-              - Run Phase C2 only if the diff touches public APIs, shared libraries, or interface definitions.
+              - Run full Phase B audit.
+              - Run Phase B2 only if the diff touches public APIs, shared libraries, or interface definitions.
               - Maximum inline comments: 5.
 
               **Tier 3 - High Risk** (security changes, auth/authz, data migrations, public API changes, infrastructure/deployment changes, shared library changes):
-              - Run all phases including full Phase C2 and Phase C3.
+              - Run all phases including full Phase B2 and Phase B3.
               - Maximum inline comments: 8.
 
               Determine the tier before proceeding. State the tier in your summary.
 
-              ### Phase B: Clean Up Previous Inline Comments
-              Before posting new inline comments, delete all previous Tabnine PR Bot inline review comments:
-              1. List all PR comments: curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments?pagelen=100'
-              2. For each comment whose content.raw starts with '#### Tabnine PR Bot' and has an 'inline' property (indicating it's an inline comment), delete it using: curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request DELETE '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments/COMMENT_ID'
-              Note: Summary comments are cleaned up automatically before this review runs, so you only need to handle inline comments here.
-
-              ### Phase C: Engineering Audit
+              ### Phase B: Engineering Audit
               Evaluate the code against these pillars IN PRIORITY ORDER. Spend the most effort on the highest-priority categories.
 
               **P0 - Correctness & Logic** (most critical):
@@ -224,7 +218,7 @@ pipelines:
               - Are names self-explanatory? Are complex algorithms or non-obvious business rules documented?
               - Does the code follow existing project conventions?
 
-              ### Phase C2: Cross-Repository Impact Analysis (Skip for Tier 1)
+              ### Phase B2: Cross-Repository Impact Analysis (Skip for Tier 1)
               Use the Tabnine MCP context engine tools to analyze cross-repository impact of this PR:
               1. **List repositories**: Call 'remote_repositories_list' to discover the organization's repository ecosystem.
               2. **Find related services**: Call 'remote_search_assets' with queries derived from the changed files to find SERVICE_SUMMARY and OPENAPI_SPEC assets related to the code being modified.
@@ -242,14 +236,14 @@ pipelines:
                  - Services or repositories as nodes
                   - Call or dependency relationships as directed edges
                   - Use this diagram to reason about blast radius, layering violations, or unintended coupling.
-              8. **Compile findings** for inclusion in the Phase E summary comment:
+              8. **Compile findings** for inclusion in the Phase D summary comment:
                  - Architecture violations or new inter-service dependencies introduced by this PR
                  - Other repositories or services that consume the changed code (with file and line references where possible)
                  - High-level architecture insight derived from SERVICE_SUMMARY / OPENAPI_SPEC assets
                  - ASCII architecture diagram (only if it adds clarity; omit if trivial)
                  - If no cross-repo impact is found, state 'No cross-repository impact detected'
 
-              ### Phase C3: Infrastructure & Configuration Review (Tier 3 only, skip if no infra files in diff)
+              ### Phase B3: Infrastructure & Configuration Review (Tier 3 only, skip if no infra files in diff)
               If the PR modifies infrastructure or configuration files, apply these checks:
               **Dockerfiles**: Are base images pinned (not 'latest')? Running as non-root? Secrets not in build args?
               **CI/CD Pipelines**: Are dependencies version-pinned? Could this break the pipeline for other branches? Secrets via secure stores?
@@ -257,7 +251,7 @@ pipelines:
               **Terraform/IaC**: Any resource destruction? Blast radius limited? New resources tagged consistently?
               **Config/Env Vars**: New vars have safe defaults? Sensitive values from secret managers? App fails fast if required config missing?
 
-              ### Phase C4: Coaching Guidelines Compliance
+              ### Phase B4: Coaching Guidelines Compliance
               Use the Tabnine MCP 'get_guidelines' tool to retrieve the organization's coaching guidelines and validate the changed code against them:
               1. **Identify languages**: Determine which programming languages are present in the diff (e.g., python, javascript, typescript, java, php, go, cpp, csharp, kotlin).
               2. **Fetch guidelines**: Call 'get_guidelines' with the 'language' parameter for each language detected in the diff to retrieve applicable coaching guidelines. If changed files span multiple languages, call it once per language.
@@ -266,7 +260,7 @@ pipelines:
                  - Post an inline comment referencing the guideline ID and description. Coaching guideline violations are exempt from the tier comment budget -- every violation must be reported.
                  - Use the guideline's severity to map to the inline comment severity: Critical -> [Critical], Error -> [Warning], Warning -> [Suggestion], Info -> [Suggestion].
                  - Include the guideline's recommended fix or best practice in the 'Suggested fix' section of the comment.
-              5. **Include in summary**: Add a 'Coaching Guidelines' section to the Phase E summary if any violations were found. List violated guideline IDs grouped by severity. If no violations were found, state 'All changed code complies with coaching guidelines.'
+              5. **Include in summary**: Add a 'Coaching Guidelines' section to the Phase D summary if any violations were found. List violated guideline IDs grouped by severity. If no violations were found, state 'All changed code complies with coaching guidelines.'
 
               ## 4. Comment Value Threshold (CRITICAL FILTER)
 
@@ -281,7 +275,7 @@ pipelines:
               - Introduces a deployment risk (non-backward-compatible migration, missing feature flag for risky change)
               - Changes CI/CD configuration in a way that could break the build for other contributors
               - Violates critical project patterns (e.g., error handling, path handling)
-              - Violates any organization coaching guideline, regardless of severity (from Phase C4)
+              - Violates any organization coaching guideline, regardless of severity (from Phase B4)
               - Makes the code significantly harder to maintain or debug
 
               **DO NOT comment on:**
@@ -304,9 +298,9 @@ pipelines:
 
               **Golden Rule**: If removing your comment would NOT increase the risk of bugs, security issues, or maintenance problems, DO NOT POST IT.
 
-              ### Phase D: Inline Comments
+              ### Phase C: Inline Comments
 
-              For each potential issue from Phase C:
+              For each potential issue from Phase B:
               1. Apply the Comment Value Threshold filter above
               2. Enforce the tier comment budget (Tier 1: max 1, Tier 2: max 5, Tier 3: max 8). If you have more findings than the budget, keep only the highest-severity ones.
               3. Verify the file exists in the diff and the line number is within changed lines
@@ -328,7 +322,7 @@ pipelines:
               For inline comments on specific lines:
               curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request POST --header 'Content-Type: application/json' --data '{"content": {"raw": "#### Tabnine PR Bot\n\nYOUR_COMMENT"}, "inline": {"path": "FILE_PATH", "to": LINE_NUMBER}}' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments'
 
-              ### Phase E: Final Summary
+              ### Phase D: Final Summary
               After submitting inline comments (or if zero comments were posted), post the holistic summary.
               The summary is the MOST IMPORTANT output -- most developers read only this.
               Create the summary comment using the Bitbucket PR Comments API:
@@ -339,8 +333,8 @@ pipelines:
               - **What This PR Does** (1-2 sentences): Demonstrate you understood the author's intent. This builds trust.
               - **Assessment** (1-3 sentences): Overall verdict. Is this good to merge? Any blockers?
               - **Key Findings** (only if findings exist): Group by severity -- [Critical] first, then [Warning], then [Suggestion]. List max 3-5 findings; if more, prioritize by severity.
-              - **Cross-Repository Impact** (Tier 2-3 only): Findings from Phase C2, or 'No cross-repository impact detected.'
-              - **Coaching Guidelines**: Findings from Phase C4 -- list violated guideline IDs grouped by severity, or 'All changed code complies with coaching guidelines.'
+              - **Cross-Repository Impact** (Tier 2-3 only): Findings from Phase B2, or 'No cross-repository impact detected.'
+              - **Coaching Guidelines**: Findings from Phase B4 -- list violated guideline IDs grouped by severity, or 'All changed code complies with coaching guidelines.'
               - **Deployment & Operations** (only if relevant): Migration safety, feature flag requirements, observability gaps, infrastructure concerns. Omit entirely if no operational concerns.
               - **What Looks Good** (1-3 bullet points): Specific things the author did well (good test coverage, clean error handling, thoughtful API design). Always find something positive.
 
