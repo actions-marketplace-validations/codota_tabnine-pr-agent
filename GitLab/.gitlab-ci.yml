@@ -10,6 +10,7 @@
 # Optional CI/CD Variables:
 #   TABNINE_HOST         - Tabnine host URL (default: https://console.tabnine.com)
 #   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent
+#   TABNINE_CLEANUP      - Set to "true" to delete settings.json after each run. Recommended for self-hosted runners.
 
 stages:
   - review
@@ -23,6 +24,7 @@ tabnine-code-review:
     # default values for optional variables
     TABNINE_HOST: "https://console.tabnine.com"
     TABNINE_MODEL_ID: ""
+    TABNINE_CLEANUP: "false"
   before_script:
     
     # Input validation
@@ -384,4 +386,10 @@ tabnine-code-review:
       - Restating what the code does without adding insight
 
       **Comment Density Rule**: If you are about to post more than the tier's budget, re-evaluate all comments and keep only the most impactful. Developers ignore reviews with too many comments."
+  after_script:
+    - |
+      if [ "${TABNINE_CLEANUP}" = "true" ]; then
+        echo "Cleaning up Tabnine settings..."
+        rm -f ~/.tabnine/agent/settings.json
+      fi
   allow_failure: true
