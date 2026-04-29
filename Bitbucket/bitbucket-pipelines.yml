@@ -319,8 +319,12 @@ pipelines:
               - **[Warning]** -- Logic issues, edge cases, performance concerns. Strongly recommended to fix.
               - **[Suggestion]** -- Improvements to maintainability or clarity. Author's discretion.
 
+              **FILE-LEVEL vs LINE-LEVEL comments**: If a comment applies to the entire file rather than specific lines (e.g., a deleted file, a file that should not exist, or a concern about the file as a whole), post a FILE-LEVEL comment using 'inline.path' without 'from'/'to' instead of a comment spanning all lines. Never post a comment that covers all or most lines of a file -- this creates an excessively large comment. Use file-level comments for file-wide feedback.
+
               Submit inline comments using the Bitbucket PR Comments API:
               **IMPORTANT**: All comments MUST start with '$COMMENT_PREFIX' on the first line, followed by a blank line, then your formatted comment content.
+              For FILE-LEVEL comments (when the comment applies to the entire file, not specific lines):
+              curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request POST --header 'Content-Type: application/json' --data '{"content": {"raw": "$COMMENT_PREFIX\n\nYOUR_COMMENT"}, "inline": {"path": "FILE_PATH"}}' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments'
               For inline comments on specific lines:
               curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request POST --header 'Content-Type: application/json' --data '{"content": {"raw": "$COMMENT_PREFIX\n\nYOUR_COMMENT"}, "inline": {"path": "FILE_PATH", "to": LINE_NUMBER}}' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments'
 

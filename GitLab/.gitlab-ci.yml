@@ -328,8 +328,14 @@ tabnine-code-review:
       - **[Warning]** -- Logic issues, edge cases, performance concerns. Strongly recommended to fix.
       - **[Suggestion]** -- Improvements to maintainability or clarity. Author's discretion.
 
+      **FILE-LEVEL vs LINE-LEVEL comments**: If a comment applies to the entire file rather than specific lines (e.g., a deleted file, a file that should not exist, or a concern about the file as a whole), post a general MR discussion (without the 'position' parameter) and mention the filename in the body. Never post an inline comment that covers all or most lines of a file -- this creates an excessively large comment. Use file-level comments for file-wide feedback.
+
       Submit inline comments using the GitLab Discussions API:
       **IMPORTANT**: All comments MUST start with '$COMMENT_PREFIX' on the first line, followed by a blank line, then your formatted comment content.
+      For FILE-LEVEL comments (when the comment applies to the entire file, not specific lines -- post as a general discussion, not an inline comment):
+      curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
+        --data '{\"body\": \"$COMMENT_PREFIX\n\n**File: FILE_PATH**\n\nYOUR_COMMENT\"}' \\
+        '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
       For inline comments on specific lines:
       curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
         --data '{\"body\": \"$COMMENT_PREFIX\n\nYOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": LINE_NUMBER}}' \\
