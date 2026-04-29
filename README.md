@@ -37,7 +37,7 @@ permissions:
 
 ```yaml
 - name: Review PR
-  uses: codota/tabnine-pr-agent@v1
+  uses: codota/tabnine-pr-agent@v2
   continue-on-error: true
   with:
     # Tabnine authentication token — required
@@ -63,6 +63,20 @@ permissions:
 
     # Model ID for the Tabnine CLI agent (optional, overrides DEFAULT_MODEL_ID in action.yml)
     # model_id: "your-model-id"
+
+    # Custom prompt to replace the default code review (optional)
+    # prompt_override: "Your custom prompt here"
+
+    # Display name for the agent step (optional, default: 'Tabnine Agent')
+    # step_name: "Tabnine Agent"
+
+    # Prefix used to identify bot comments for cleanup (optional, default: '#### Tabnine PR Bot')
+    # Use a unique value per action invocation to avoid cross-cleanup.
+    # comment_prefix: "#### Tabnine PR Bot"
+
+    # Set to "true" to delete settings.json after each run (optional, default: "false")
+    # Recommended for self-hosted runners.
+    # cleanup: "true"
 ```
 
 ### Inputs
@@ -77,6 +91,10 @@ permissions:
 | `base_sha` | Yes | — | PR base commit SHA |
 | `tabnine_host` | No | `https://console.tabnine.com` | Tabnine host URL (for self-hosted / EMT installations) |
 | `model_id` | No | — | Model ID for the Tabnine CLI agent. If omitted, falls back to `DEFAULT_MODEL_ID` in `action.yml` or the system default from the admin console. |
+| `prompt_override` | No | — | Custom prompt to replace the default code review prompt. When provided, the agent runs your prompt instead of the built-in review. |
+| `step_name` | No | `Tabnine Agent` | Display name for the agent step. |
+| `comment_prefix` | No | `#### Tabnine PR Bot` | Prefix used to identify bot comments for cleanup. Use a unique value per action invocation to avoid cross-cleanup. |
+| `cleanup` | No | `false` | Set to `"true"` to delete `settings.json` after each run. Recommended for self-hosted runners. |
 
 ## Full Workflow Example
 
@@ -102,7 +120,7 @@ jobs:
           fetch-depth: 0
 
       - name: Review PR
-        uses: codota/tabnine-pr-agent@v1
+        uses: codota/tabnine-pr-agent@v2
         continue-on-error: true
         with:
           TABNINE_KEY: ${{ secrets.TABNINE_KEY }}
@@ -129,6 +147,8 @@ Set the following CI/CD variables in **Settings > CI/CD > Variables**:
 | `GITLAB_API_TOKEN` | Yes | GitLab personal or project access token with `api` scope. Mark as **Masked**. |
 | `TABNINE_HOST` | No | Tabnine host URL for self-hosted / EMT installations (default: `https://console.tabnine.com`) |
 | `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If empty, uses the system default from the admin console. |
+| `TABNINE_CLEANUP` | No | Set to `"true"` to delete `settings.json` after each run. Recommended for self-hosted runners. |
+| `TABNINE_COMMENT_PREFIX` | No | Prefix used to identify bot comments for cleanup (default: `#### Tabnine PR Bot`). |
 
 ## Usage
 
@@ -166,6 +186,8 @@ Set the following repository variables in **Repository Settings > Pipelines > Re
 | `BB_API_TOKEN` | Yes | Bitbucket token with `pullrequest:write` and `repository:read` scopes. Mark as **Secured**. |
 | `TABNINE_HOST` | No | Tabnine host URL for self-hosted / EMT installations (default: `https://console.tabnine.com`) |
 | `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If empty, falls back to `DEFAULT_MODEL_ID` in the pipeline yml or the system default from the admin console. |
+| `TABNINE_CLEANUP` | No | Set to `"true"` to delete `settings.json` after each run. Recommended for self-hosted runners. |
+| `TABNINE_COMMENT_PREFIX` | No | Prefix used to identify bot comments for cleanup (default: `#### Tabnine PR Bot`). |
 
 ## Usage
 
