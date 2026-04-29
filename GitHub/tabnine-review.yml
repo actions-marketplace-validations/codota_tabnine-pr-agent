@@ -12,6 +12,7 @@
 #   TABNINE_HOST         - Tabnine host URL (default: https://console.tabnine.com). Set this for self-hosted / EMT installations.
 #   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent. If empty, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
 #   TABNINE_CLEANUP      - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
+#   TABNINE_COMMENT_PREFIX - Prefix used to identify bot comments for cleanup (default: '#### Tabnine PR Bot').
 
 name: "Tabnine PR Review Agent"
 
@@ -109,11 +110,12 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_PREFIX: ${{ vars.TABNINE_COMMENT_PREFIX || '#### Tabnine PR Bot' }}
         run: |
-          echo "Cleaning up previous Tabnine PR Bot comments..."
+          echo "Cleaning up previous bot comments (prefix: $COMMENT_PREFIX)..."
 
           # Get all issue comments on the PR
-          COMMENTS=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" --jq '.[] | select(.body | startswith("#### Tabnine PR Bot")) | .id')
+          COMMENTS=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" --jq '[.[] | select(.body | startswith(env.COMMENT_PREFIX)) | .id] | .[]')
 
           # Delete all bot summary comments to prevent duplicates
           for COMMENT_ID in $COMMENTS; do
@@ -122,7 +124,7 @@ jobs:
           done
 
           # Get all pull-request comments on the PR
-          PR_COMMENTS=$(gh api "/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments" --jq '.[] | select(.body | startswith("#### Tabnine PR Bot")) | .id')
+          PR_COMMENTS=$(gh api "/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments" --jq '[.[] | select(.body | startswith(env.COMMENT_PREFIX)) | .id] | .[]')
 
           # Delete all bot inline review comments to prevent duplicates
           for COMMENT_ID in $PR_COMMENTS; do
@@ -137,6 +139,7 @@ jobs:
         continue-on-error: true
         env:
           TABNINE_TOKEN: ${{ secrets.TABNINE_KEY }}
+          COMMENT_PREFIX: ${{ vars.TABNINE_COMMENT_PREFIX || '#### Tabnine PR Bot' }}
         run: |
           if [ -z "$TABNINE_TOKEN" ]; then
             echo "Error: TABNINE_KEY is required"
@@ -347,13 +350,13 @@ jobs:
           - **[Suggestion]** -- Improvements to maintainability or clarity. Author's discretion.
 
           Submit inline comments using:
-          **IMPORTANT**: All comments MUST start with '#### Tabnine PR Bot' on the first line, followed by a blank line, then your formatted comment content.
+          **IMPORTANT**: All comments MUST start with '$COMMENT_PREFIX' on the first line, followed by a blank line, then your formatted comment content.
           For SINGLE-LINE comments:
-          gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments -f body='#### Tabnine PR Bot
+          gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments -f body='$COMMENT_PREFIX
 
           YOUR_COMMENT' -f commit_id='${{ github.event.pull_request.head.sha }}' -f path='FILE_PATH' -F line=LINE_NUMBER -f side='RIGHT'
           For MULTI-LINE comments:
-          gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments -f body='#### Tabnine PR Bot
+          gh api --method POST -H 'Accept: application/vnd.github+json' /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments -f body='$COMMENT_PREFIX
 
           YOUR_COMMENT' -f commit_id='${{ github.event.pull_request.head.sha }}' -f path='FILE_PATH' -F start_line=START_LINE_NUMBER -f start_side='RIGHT' -F line=END_LINE_NUMBER -f side='RIGHT'
           **Code Suggestions**: Use GitHub's suggestion syntax ONLY when the fix is clear, unambiguous, and replaces 10 or fewer lines:
@@ -366,7 +369,7 @@ jobs:
           After submitting inline comments (or if zero comments were posted), post the holistic summary.
           The summary is the MOST IMPORTANT output -- most developers read only this.
           Create the summary comment using:
-          gh api --method POST /repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments -f body='#### Tabnine PR Bot
+          gh api --method POST /repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments -f body='$COMMENT_PREFIX
 
           YOUR_SUMMARY'
 

@@ -11,6 +11,7 @@
 #   TABNINE_HOST           - Tabnine host URL (default: https://console.tabnine.com)
 #   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent. If empty, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
 #   TABNINE_CLEANUP        - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
+#   TABNINE_COMMENT_PREFIX - Prefix used to identify bot comments for cleanup (default: '#### Tabnine PR Bot').
 
 image: node:20
 
@@ -30,6 +31,7 @@ pipelines:
             - export BB_PR_ID="${BITBUCKET_PR_ID}"
             - export BB_COMMIT="${BITBUCKET_COMMIT}"
             - export BB_PR_DEST_BRANCH="${BITBUCKET_PR_DESTINATION_BRANCH}"
+            - export COMMENT_PREFIX="${TABNINE_COMMENT_PREFIX:-#### Tabnine PR Bot}"
 
             # Input validation
             - |
@@ -90,8 +92,8 @@ pipelines:
 
             # Clean up previous bot summary comments
             - |
-              echo "Cleaning up previous Tabnine PR Bot comments..."
-              COMMENTS=$(curl -s --header "Authorization: Bearer $BB_API_TOKEN" "$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments?pagelen=100" | jq -r '.values[] | select(.content.raw | startswith("#### Tabnine PR Bot")) | .id')
+              echo "Cleaning up previous bot comments (prefix: $COMMENT_PREFIX)..."
+              COMMENTS=$(curl -s --header "Authorization: Bearer $BB_API_TOKEN" "$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments?pagelen=100" | jq -r ".values[] | select(.content.raw | startswith(\"$COMMENT_PREFIX\")) | .id")
 
               for COMMENT_ID in $COMMENTS; do
                 echo "Deleting bot comment: $COMMENT_ID"
@@ -318,15 +320,15 @@ pipelines:
               - **[Suggestion]** -- Improvements to maintainability or clarity. Author's discretion.
 
               Submit inline comments using the Bitbucket PR Comments API:
-              **IMPORTANT**: All comments MUST start with '#### Tabnine PR Bot' on the first line, followed by a blank line, then your formatted comment content.
+              **IMPORTANT**: All comments MUST start with '$COMMENT_PREFIX' on the first line, followed by a blank line, then your formatted comment content.
               For inline comments on specific lines:
-              curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request POST --header 'Content-Type: application/json' --data '{"content": {"raw": "#### Tabnine PR Bot\n\nYOUR_COMMENT"}, "inline": {"path": "FILE_PATH", "to": LINE_NUMBER}}' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments'
+              curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request POST --header 'Content-Type: application/json' --data '{"content": {"raw": "$COMMENT_PREFIX\n\nYOUR_COMMENT"}, "inline": {"path": "FILE_PATH", "to": LINE_NUMBER}}' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments'
 
               ### Phase D: Final Summary
               After submitting inline comments (or if zero comments were posted), post the holistic summary.
               The summary is the MOST IMPORTANT output -- most developers read only this.
               Create the summary comment using the Bitbucket PR Comments API:
-              curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request POST --header 'Content-Type: application/json' --data '{"content": {"raw": "#### Tabnine PR Bot\n\nYOUR_SUMMARY"}}' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments'
+              curl -s --header 'Authorization: Bearer \$BB_API_TOKEN' --request POST --header 'Content-Type: application/json' --data '{"content": {"raw": "$COMMENT_PREFIX\n\nYOUR_SUMMARY"}}' '$BB_API_BASE/repositories/$BB_WORKSPACE/$BB_REPO_SLUG/pullrequests/$BB_PR_ID/comments'
 
               Structure your summary as follows:
               - **Line 1 - Risk Tier**: State the tier: [Low Risk], [Standard], or [HIGH RISK]

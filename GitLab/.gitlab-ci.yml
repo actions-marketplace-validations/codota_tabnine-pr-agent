@@ -11,6 +11,7 @@
 #   TABNINE_HOST         - Tabnine host URL (default: https://console.tabnine.com)
 #   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent
 #   TABNINE_CLEANUP      - Set to "true" to delete settings.json after each run. Recommended for self-hosted runners.
+#   TABNINE_COMMENT_PREFIX - Prefix used to identify bot comments for cleanup (default: '#### Tabnine PR Bot').
 
 stages:
   - review
@@ -86,12 +87,13 @@ tabnine-code-review:
       export HEAD_SHA="${CI_MERGE_REQUEST_DIFF_HEAD_SHA}"
       export BASE_SHA="${CI_MERGE_REQUEST_DIFF_BASE_SHA}"
       export PROJECT_PATH="${CI_PROJECT_PATH}"
+      export COMMENT_PREFIX="${TABNINE_COMMENT_PREFIX:-#### Tabnine PR Bot}"
 
       # Clean up previous bot summary notes
-      echo "Cleaning up previous Tabnine PR Bot notes..."
+      echo "Cleaning up previous bot comments (prefix: $COMMENT_PREFIX)..."
       NOTES=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
         "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/notes" \
-        | jq -r '.[] | select(.body | startswith("#### Tabnine PR Bot")) | .id')
+        | jq -r ".[] | select(.body | startswith(\"$COMMENT_PREFIX\")) | .id")
 
       for NOTE_ID in $NOTES; do
         echo "Deleting bot note: $NOTE_ID"
@@ -100,10 +102,10 @@ tabnine-code-review:
       done
 
       # Clean up previous bot inline comments (discussion notes)
-      echo "Cleaning up previous Tabnine PR Bot inline comments..."
+      echo "Cleaning up previous bot inline comments (prefix: $COMMENT_PREFIX)..."
       DISCUSSIONS=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
         "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions")
-      echo "$DISCUSSIONS" | jq -r '.[] | {did: .id, notes: [.notes[] | select(.body | startswith("#### Tabnine PR Bot")) | .id]} | select(.notes | length > 0) | .did as $did | .notes[] | "\($did) \(.)"' | while read DISCUSSION_ID NOTE_ID; do
+      echo "$DISCUSSIONS" | jq -r ".[] | {did: .id, notes: [.notes[] | select(.body | startswith(\"$COMMENT_PREFIX\")) | .id]} | select(.notes | length > 0) | .did as \$did | .notes[] | \"\\(\$did) \\(.)\"" | while read DISCUSSION_ID NOTE_ID; do
         echo "Deleting bot inline comment: discussion=$DISCUSSION_ID note=$NOTE_ID"
         curl -s --request DELETE --header "PRIVATE-TOKEN: $GITLAB_API_TOKEN" \
           "$GITLAB_API_URL/projects/$PROJECT_ID/merge_requests/$MR_IID/discussions/$DISCUSSION_ID/notes/$NOTE_ID" || true
@@ -327,14 +329,14 @@ tabnine-code-review:
       - **[Suggestion]** -- Improvements to maintainability or clarity. Author's discretion.
 
       Submit inline comments using the GitLab Discussions API:
-      **IMPORTANT**: All comments MUST start with '#### Tabnine PR Bot' on the first line, followed by a blank line, then your formatted comment content.
+      **IMPORTANT**: All comments MUST start with '$COMMENT_PREFIX' on the first line, followed by a blank line, then your formatted comment content.
       For inline comments on specific lines:
       curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
-        --data '{\"body\": \"#### Tabnine PR Bot\n\nYOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": LINE_NUMBER}}' \\
+        --data '{\"body\": \"$COMMENT_PREFIX\n\nYOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": LINE_NUMBER}}' \\
         '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
       For multi-line inline comments:
       curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
-        --data '{\"body\": \"#### Tabnine PR Bot\n\nYOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": END_LINE_NUMBER, \"line_range\": {\"start\": {\"line_code\": \"START_LINE_CODE\", \"type\": \"new\"}, \"end\": {\"line_code\": \"END_LINE_CODE\", \"type\": \"new\"}}}}' \\
+        --data '{\"body\": \"$COMMENT_PREFIX\n\nYOUR_COMMENT\", \"position\": {\"base_sha\": \"\$BASE_SHA\", \"head_sha\": \"\$HEAD_SHA\", \"start_sha\": \"\$BASE_SHA\", \"position_type\": \"text\", \"new_path\": \"FILE_PATH\", \"new_line\": END_LINE_NUMBER, \"line_range\": {\"start\": {\"line_code\": \"START_LINE_CODE\", \"type\": \"new\"}, \"end\": {\"line_code\": \"END_LINE_CODE\", \"type\": \"new\"}}}}' \\
         '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/discussions'
       **Code Suggestions**: Use GitLab's suggestion syntax ONLY when the fix is clear, unambiguous, and replaces 10 or fewer lines:
       \`\`\`suggestion:-0+0
@@ -347,7 +349,7 @@ tabnine-code-review:
       The summary is the MOST IMPORTANT output -- most developers read only this.
       Create the summary note using the GitLab Notes API:
       curl -s --request POST --header 'PRIVATE-TOKEN: \$GITLAB_API_TOKEN' --header 'Content-Type: application/json' \\
-        --data '{\"body\": \"#### Tabnine PR Bot\n\nYOUR_SUMMARY\"}' \\
+        --data '{\"body\": \"$COMMENT_PREFIX\n\nYOUR_SUMMARY\"}' \\
         '\$GITLAB_API_URL/projects/\$PROJECT_ID/merge_requests/\$MR_IID/notes'
 
       Structure your summary as follows:
