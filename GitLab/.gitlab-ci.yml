@@ -12,6 +12,9 @@
 #   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent
 #   TABNINE_CLEANUP      - Set to "true" to delete settings.json after each run. Recommended for self-hosted runners.
 #   TABNINE_COMMENT_PREFIX - Prefix used to identify bot comments for cleanup (default: '#### Tabnine PR Bot').
+#   GIT_DEPTH            - Clone depth (default: "20", shallow). GitLab natively reads this variable to control clone depth.
+#                          The built-in review uses the GitLab REST API and does not need local git history.
+#                          Set to "0" for full history if you provide a custom prompt that inspects local git history (e.g. git log, git blame).
 
 stages:
   - review
@@ -26,6 +29,8 @@ tabnine-code-review:
     TABNINE_HOST: "https://console.tabnine.com"
     TABNINE_MODEL_ID: ""
     TABNINE_CLEANUP: "false"
+    # Shallow clone by default; override by setting GIT_DEPTH in Settings > CI/CD > Variables.
+    GIT_DEPTH: "20"
   before_script:
     
     # Input validation
