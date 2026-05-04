@@ -12,6 +12,14 @@
 #   TABNINE_MODEL_ID       - Model ID for the Tabnine CLI agent. If empty, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
 #   TABNINE_CLEANUP        - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
 #   TABNINE_COMMENT_PREFIX - Prefix used to identify bot comments for cleanup (default: '#### Tabnine PR Bot').
+#
+# Clone depth:
+#   The `clone.depth` value below controls how much git history is fetched.
+#   Bitbucket Pipelines does NOT support variable substitution for `clone.depth`, so to change it
+#   you must edit this file directly. Accepted values: a positive integer, or the literal string `full`.
+#   The built-in review uses the Bitbucket REST API and does not need local git history; the shallow
+#   default is fine. Set to `full` only if you provide a custom prompt that inspects local git history
+#   (e.g. git log, git blame).
 
 image: node:20
 
@@ -20,6 +28,8 @@ pipelines:
     '**':
       - step:
           name: Tabnine Code Review
+          clone:
+            depth: 50
           script:
             # Set a default model ID here, or leave empty to use the system default from the admin console.
             - export DEFAULT_MODEL_ID=""

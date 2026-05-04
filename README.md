@@ -16,6 +16,16 @@ Set the following repository secret in **Settings > Secrets and variables > Acti
 
 The action also requires a `github_token` input — typically provided via the built-in `secrets.GITHUB_TOKEN`.
 
+Optionally, set the following repository variables in **Settings > Secrets and variables > Actions > Variables**:
+
+| Variable | Required | Description |
+|---|---|---|
+| `TABNINE_HOST` | No | Tabnine host URL for self-hosted / EMT installations (default: `https://console.tabnine.com`) |
+| `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If empty, falls back to `DEFAULT_MODEL_ID` in the workflow yml or the system default from the admin console. |
+| `TABNINE_CLEANUP` | No | Set to `"true"` to delete `settings.json` after each run. Recommended for self-hosted runners. |
+| `TABNINE_COMMENT_PREFIX` | No | Prefix used to identify bot comments for cleanup (default: `#### Tabnine PR Bot`). |
+| `TABNINE_FETCH_DEPTH` | No | Clone depth for `actions/checkout`. Default `"1"` (shallow) is sufficient — the built-in review uses the `gh` API and does not need local git history. Set to `"0"` for full history only if your `prompt_override` inspects local git history (e.g. `git log`, `git blame`). |
+
 ## Usage
 
 1. This action works only on the `pull_request` event within the workflow.
@@ -31,7 +41,7 @@ permissions:
   pull-requests: write
 ```
 
-2. Ensure that the repository is [checked out](https://github.com/actions/checkout/tree/v4#readme) with full history (`fetch-depth: 0`) within your workflow.
+2. Ensure that the repository is [checked out](https://github.com/actions/checkout/tree/v4#readme) within your workflow. The default shallow clone (`fetch-depth: 1`) is sufficient — the built-in review uses the `gh` API and does not need local git history. Set `fetch-depth: 0` for full history only if your `prompt_override` inspects local git history (e.g. `git log`, `git blame`). See the [full workflow example](#full-workflow-example) for the recommended pattern that makes the depth configurable via the `TABNINE_FETCH_DEPTH` variable.
 
 3. Add the following step to your workflow:
 
@@ -117,7 +127,9 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # Default is 1 (shallow). Override per-repo by setting the
+          # TABNINE_FETCH_DEPTH variable. Use 0 for full history.
+          fetch-depth: ${{ vars.TABNINE_FETCH_DEPTH || 1 }}
 
       - name: Review PR
         uses: codota/tabnine-pr-agent@v2
@@ -149,6 +161,7 @@ Set the following CI/CD variables in **Settings > CI/CD > Variables**:
 | `TABNINE_MODEL_ID` | No | Model ID for the Tabnine CLI agent. If empty, uses the system default from the admin console. |
 | `TABNINE_CLEANUP` | No | Set to `"true"` to delete `settings.json` after each run. Recommended for self-hosted runners. |
 | `TABNINE_COMMENT_PREFIX` | No | Prefix used to identify bot comments for cleanup (default: `#### Tabnine PR Bot`). |
+| `GIT_DEPTH` | No | Clone depth. Default `"20"` (shallow) is sufficient — the built-in review uses the GitLab REST API and does not need local git history. Set to `"0"` for full history only if your custom prompt inspects local git history (e.g. `git log`, `git blame`). |
 
 ## Usage
 
@@ -207,3 +220,9 @@ pipelines:
           script:
             # ... (see Bitbucket/bitbucket-pipelines.yml for full configuration)
 ```
+
+## Clone depth
+
+The step in `bitbucket-pipelines.yml` sets `clone.depth: 50`, which is sufficient — the built-in review uses the Bitbucket REST API and does not need local git history. Set to `full` for full history only if your custom prompt inspects local git history (e.g. `git log`, `git blame`).
+
+Bitbucket Pipelines does not support variable substitution for `clone.depth`, so it must be edited directly in the file rather than controlled by a repository variable.

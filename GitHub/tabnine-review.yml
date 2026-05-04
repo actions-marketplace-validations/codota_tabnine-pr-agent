@@ -13,6 +13,8 @@
 #   TABNINE_MODEL_ID     - Model ID for the Tabnine CLI agent. If empty, falls back to DEFAULT_MODEL_ID below or the system default from the admin console.
 #   TABNINE_CLEANUP      - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
 #   TABNINE_COMMENT_PREFIX - Prefix used to identify bot comments for cleanup (default: '#### Tabnine PR Bot').
+#   TABNINE_FETCH_DEPTH  - Clone depth for actions/checkout (default: "1", shallow). The built-in review uses the 'gh' API and does not need local git history.
+#                          Set to "0" for full history if you provide a custom prompt that inspects local git history (e.g. git log, git blame).
 
 name: "Tabnine PR Review Agent"
 
@@ -32,7 +34,11 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # Clone depth. Default is 1 (shallow), which matches actions/checkout's native default and is sufficient
+          # for the built-in review (it uses the 'gh' API, not local git history).
+          # Set the repository variable TABNINE_FETCH_DEPTH to "0" for full history, or another value, if your
+          # custom prompt_override inspects local git history (e.g. git log, git blame, git diff base..head).
+          fetch-depth: ${{ vars.TABNINE_FETCH_DEPTH || 1 }}
 
       - name: Install Tabnine CLI
         shell: bash
