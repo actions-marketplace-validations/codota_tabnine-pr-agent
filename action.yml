@@ -22,7 +22,7 @@
 #   cleanup              - Set to "true" to delete settings.json after each run (default: "false"). Recommended for self-hosted runners.
 
 name: 'Tabnine PR Agent'
-description: 'Run a Tabnine CLI Agent task on a pull request'
+description: "Run Tabnine's AI agent on your pull requests: inline feedback, cross-repo impact analysis, and customizable prompts"
 
 inputs:
   TABNINE_KEY:
